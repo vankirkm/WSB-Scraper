@@ -1,0 +1,2 @@
+#WSB Scraper
+This is a python script designed to scrape comment data from r/wallstreetbets and parse it into data that can be used to implement a trading strategy based on past and current WSB sentiment.
