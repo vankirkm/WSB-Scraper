@@ -26,7 +26,7 @@ def parseLine(line):
 
 # create reddit object with praw
 reddit = praw.Reddit(
-    '''personal data removed'''
+    '''personal info censored'''
 )
 
 # Give URL for thread to parse, create new submission, open reddit_data.txt and prepare to write comments to file
