@@ -111,7 +111,7 @@ with textData as file_object:
             position = match.group('callPosition', 0)
             row = {
                 'Ticker': position[0],
-                'Position': position[1]
+                'Position': re.search(r'\d+/\d+ \d+[c-cC-C]', position[1]).group()
             }
             positionData.append(row)
         elif key == 'putPosition':
@@ -119,7 +119,7 @@ with textData as file_object:
             position = match.group('putPosition', 0)
             row = {
                 'Ticker': position[0],
-                'Position': position[1]
+                'Position': re.search(r'\d+/\d+ \d+[p-pP-P]', position[1]).group()
             }
             positionData.append(row)           
 
@@ -158,8 +158,8 @@ tickerSheet.insert_chart('D2', tickerChart)
 
 positionChart = workbook.add_chart({'type': 'column'})
 positionChart.add_series({
-    'categories': ['Sheet2', 1, 1, numRows, 1],
-    'values':     ['Sheet2', 2, 2, numRows, 2],
+    'categories': ['Sheet2', 1, 1, numPositionRows, 0],
+    'values':     ['Sheet2', 2, 2, numPositionRows, 2],
     'gap':        2,
 })
 positionSheet.insert_chart('D2', positionChart)
