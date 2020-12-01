@@ -14,8 +14,10 @@ from praw import exceptions
 
 # create dictionary of regex patterns to check reference file against
 rx_dict = {
-    'ticker_calls': re.compile(r'(?P<ticker_calls>[A-Z]+) calls'),
-    'ticker_puts': re.compile(r'(?P<ticker_puts>[A-Z]+) puts'),
+    'ticker_calls': re.compile(r'(?P<ticker_calls>[A-Z]+) call'),
+    'ticker_puts': re.compile(r'(?P<ticker_puts>[A-Z]+) put'),
+    'callPosition': re.compile(r'(?P<callPosition>[A-Z]+) \d+/\d+ \d+[c-cC-C]'),
+    'putPosition': re.compile(r'(?P<putPosition>[A-Z]+) \d+/\d+ \d+[p-pP-P]'),
     'calls': re.compile(r'calls'),
     'puts': re.compile(r'puts')
 }
@@ -57,9 +59,9 @@ for c in commentData:
 
 
 # Give URL for thread to parse, create new submission, open reddit_data.txt and prepare to write comments to file
-URL = "https://www.reddit.com/r/wallstreetbets/comments/k0qaqw/daily_discussion_thread_for_november_25_2020/"
+URL = "https://www.reddit.com/r/wallstreetbets/comments/k4ixya/daily_discussion_thread_for_december_01_2020/"
 submission = reddit.submission(url=URL)
-textData = open(r"F:\\Visual Studio Code Workspace\WSB Scraper\\reddit_data.txt","r+")
+textData = open(r"F:\\Visual Studio Code Workspace\WSB Scraper\\reddit_data1.txt","r+")
 
 
 # Get all comments from WSB thread hosted at given URL
@@ -78,6 +80,8 @@ with textData as file_object:
     numTickerCalls = 0
     numTickerPuts = 0
     data = []
+    positionData = []
+    numPositions = 0
     while line:
         key, match = parseLine(line)
 
@@ -102,40 +106,65 @@ with textData as file_object:
                 'Position': "puts"
             }
             data.append(row)
+        elif key == 'callPosition':
+            numPositions += 1
+            position = match.group('callPosition', 0)
+            row = {
+                'Ticker': position[0],
+                'Position': position[1]
+            }
+            positionData.append(row)
+        elif key == 'putPosition':
+            numPositions += 1
+            position = match.group('putPosition', 0)
+            row = {
+                'Ticker': position[0],
+                'Position': position[1]
+            }
+            positionData.append(row)           
 
 
         line = file_object.readline()
     
-    data = pd.DataFrame(data)
-    print(data)
-    data.set_index(['Ticker'], inplace=True)
-    data.sort_values(['Ticker'])
-    print(data)
+# make pandas dataframe for ticker comment volume data   
+data = pd.DataFrame(data)
+data.set_index(['Ticker'], inplace=True)
+data.sort_values(['Ticker'])
+data = data.groupby(['Ticker','Position']).agg({'Position': 'count'})
+print(data)
 
-    data = data.groupby(['Ticker','Position']).agg({'Position': 'count'})
-    print(data)
-    
+# make pandas dataframe for call position comment volume data   
+callPositionData = pd.DataFrame(positionData)
+callPositionData.set_index(['Ticker'], inplace=True)
+callPositionData = callPositionData.groupby(['Ticker','Position']).agg({'Position': 'count'})
+print(callPositionData)
 
-    # make excel bar chart with pandas data
-    writer = pd.ExcelWriter(r'F:\\Visual Studio Code Workspace\WSB Scraper\\reddit_data.xlsx', engine='xlsxwriter')
-    data.to_excel(writer, sheet_name='Sheet1')
-    numRows = len(data.index)
-    bIndex = numRows + 1
-    print(numRows)
+# make excel bar chart with pandas dataframe
+writer = pd.ExcelWriter(r'F:\\Visual Studio Code Workspace\WSB Scraper\\reddit_data.xlsx', engine='xlsxwriter')
+data.to_excel(writer, sheet_name='Sheet1')
+callPositionData.to_excel(writer, sheet_name='Sheet2')
+numRows = len(data.index)
+numPositionRows = len(callPositionData.index)
+workbook = writer.book
+tickerSheet = writer.sheets['Sheet1']
+positionSheet = writer.sheets['Sheet2']
+tickerChart = workbook.add_chart({'type': 'column'})
+tickerChart.add_series({
+    'categories': ['Sheet1', 1, 1, numRows, 0],
+    'values':     ['Sheet1', 1, 2, numRows, 2],
+    'gap':        2,
+})
+tickerSheet.insert_chart('D2', tickerChart)
 
-    workbook = writer.book
-    worksheet = writer.sheets['Sheet1']
+positionChart = workbook.add_chart({'type': 'column'})
+positionChart.add_series({
+    'categories': ['Sheet2', 1, 1, numRows, 1],
+    'values':     ['Sheet2', 2, 2, numRows, 2],
+    'gap':        2,
+})
+positionSheet.insert_chart('D2', positionChart)
+writer.save()
 
-    chart = workbook.add_chart({'type': 'column'})
-    chart.add_series({
-        'categories': ['Sheet1', 1, 1, numRows, 0],
-        'values':     ['Sheet1', 1, 2, numRows, 2],
-        'gap':        2,
-    })
-
-    worksheet.insert_chart('D2', chart)
-    writer.save()
-
-print(numCalls, numPuts, numTickerCalls, numTickerPuts)
+print(numCalls, numPuts, numTickerCalls, numTickerPuts, numPositions)
 
 
