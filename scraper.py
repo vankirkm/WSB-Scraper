@@ -5,12 +5,17 @@ import json
 import pandas as pd
 import time
 import datetime as dt
+from datetime import timedelta, date
 from praw.models import MoreComments
 from psaw import PushshiftAPI
 from PushShift import getPushshiftData, collectSubData
 from praw import exceptions
 
 
+# define function to iterate over days 
+def daterange(startDate, endDate):
+    for n in range(((endDate - startDate)).days):
+        yield startDate + timedelta(n)
 
 # create dictionary of regex patterns to check reference file against
 rx_dict = {
@@ -27,12 +32,8 @@ def parseLine(line):
     for key, rx in rx_dict.items():
         match = rx.search(line)
         if match:
-            print(key)
-            print(line)
             return key, match
     return None, None
-
-
 
 
 
@@ -44,24 +45,31 @@ reddit = praw.Reddit(
 
 
 # create list of most recent comment containing regex strings using a comment search with pushshift api
-'''api = PushshiftAPI(reddit)
-REGEX = r'[A-Z]+'
-start_epoch=int(dt.datetime(2020, 11, 24).timestamp())
-wsbData = api.search_comments(after=start_epoch, subreddit='wallstreetbets', limit=200)
-commentData = []
-for c in wsbData:
-    commentData.append(c)
-for c in commentData:
-    print(c, reddit.comment(c).body)'''
+startDate = date(2020, 11, 27)
+endDate = date(2020, 12, 3)
+date_range = daterange(startDate, endDate)
+api = PushshiftAPI(reddit)
+
+start = dt.datetime
+for date in date_range:
+    print(date)
+    endTemp = date + timedelta(days=1)
+    start_stamp = int(time.mktime(date.timetuple()))
+    end_stamp = int(time.mktime(endTemp.timetuple()))
+    wsbData = api.search_comments(after=start_stamp, before=end_stamp, subreddit='wallstreetbets')
+    comment_data = open(r"F:\\Visual Studio Code Workspace\\WSB Scraper\\reddit_data\\%s.txt" %date , "w+", encoding="utf-8")
+    with comment_data as file_object:
+        for c in wsbData:
+            comment_data.write(c.body + "\n")
 
 
 
 
 
 # Give URL for thread to parse, create new submission, open reddit_data.txt and prepare to write comments to file
-URL = "https://www.reddit.com/r/wallstreetbets/comments/k4ixya/daily_discussion_thread_for_december_01_2020/"
+URL = "https://www.reddit.com/r/wallstreetbets/comments/k5vaj4/daily_discussion_thread_for_december_03_2020/"
 submission = reddit.submission(url=URL)
-textData = open(r"F:\\Visual Studio Code Workspace\WSB Scraper\\reddit_data1.txt","r+")
+textData = open(r"F:\\Visual Studio Code Workspace\\WSB Scraper\\reddit_data\\reddit_data.txt","r+")
 
 
 # Get all comments from WSB thread hosted at given URL
@@ -131,16 +139,16 @@ data = pd.DataFrame(data)
 data.set_index(['Ticker'], inplace=True)
 data.sort_values(['Ticker'])
 data = data.groupby(['Ticker','Position']).agg({'Position': 'count'})
-print(data)
+
 
 # make pandas dataframe for call position comment volume data   
 callPositionData = pd.DataFrame(positionData)
 callPositionData.set_index(['Ticker'], inplace=True)
 callPositionData = callPositionData.groupby(['Ticker','Position']).agg({'Position': 'count'})
-print(callPositionData)
+
 
 # make excel bar chart with pandas dataframe
-writer = pd.ExcelWriter(r'F:\\Visual Studio Code Workspace\WSB Scraper\\reddit_data.xlsx', engine='xlsxwriter')
+writer = pd.ExcelWriter(r'F:\\Visual Studio Code Workspace\\WSB Scraper\\reddit_data\\reddit_data.xlsx', engine='xlsxwriter')
 data.to_excel(writer, sheet_name='Sheet1')
 callPositionData.to_excel(writer, sheet_name='Sheet2')
 numRows = len(data.index)
@@ -165,6 +173,5 @@ positionChart.add_series({
 positionSheet.insert_chart('D2', positionChart)
 writer.save()
 
-print(numCalls, numPuts, numTickerCalls, numTickerPuts, numPositions)
 
 
