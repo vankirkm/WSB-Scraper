@@ -40,18 +40,14 @@ def parseLine(line):
 
 # create reddit object with praw, create api with psaw
 reddit = praw.Reddit(
-    user_agent="Comment Extraction (by u/mtodavk)",
-    client_id="daYd9jyTjbDqOA",
-    client_secret="ZbYsJzIzyi1iU7y0xaBtdocdbb8",
-    username="mtodavk",
-    password="12Pizzabears"
+    '''personal info removed'''
 )
 
 
 
 # get all comments from designated subreddit within a date range and save to disk.
-'''startDate = date(2020, 11, 1)
-endDate = date(2020, 11, 27)
+startDate = date(2020, 11, 5)
+endDate = date(2020, 11, 6)
 date_range = daterange(startDate, endDate)
 api = PushshiftAPI(reddit)
 
@@ -60,12 +56,14 @@ for date in date_range:
     print(date)
     endTemp = date + timedelta(days=1)
     start_stamp = int(time.mktime(date.timetuple()))
+    
     end_stamp = int(time.mktime(endTemp.timetuple()))
+    print(start_stamp, end_stamp)
     wsbData = api.search_comments(after=start_stamp, before=end_stamp, subreddit='wallstreetbets')
     comment_data = open(r"F:\\Visual Studio Code Workspace\\WSB Scraper\\reddit_data\\%s.txt" %date , "w+", encoding="utf-8")
     with comment_data as file_object:
         for c in wsbData:
-            comment_data.write(c.body + "\n")'''
+            comment_data.write(c.body + "\n")
 
 
 
