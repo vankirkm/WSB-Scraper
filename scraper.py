@@ -119,17 +119,17 @@ for folder in list_subfolders_with_paths:
                     numTickerCalls += 1
                     row = {
                         'Ticker': call_ticker[0],
-                        'Position': "calls"
+                        'Bull Position': "calls"
                     }
-                    callData.append(row)
+                    data.append(row)
                 elif key == 'ticker_puts':
                     numTickerPuts += 1
                     put_ticker = match.group('ticker_puts', 0)
                     row = {
                         'Ticker': put_ticker[0],
-                        'Position': "puts"
+                        'Bear Position': "puts"
                     }
-                    putData.append(row)
+                    data.append(row)
                 elif key == 'callPosition':
                     numPositions += 1
                     position = match.group('callPosition', 0)
@@ -151,15 +151,12 @@ for folder in list_subfolders_with_paths:
                 line = file_object.readline()
             
         # make pandas dataframe for ticker comment volume data
-        if(callData or putData):   
-            callData = pd.DataFrame(callData)
-            putData = pd.DataFrame(putData)
-            callData.set_index(['Ticker'], inplace=True)
-            callData.sort_values(['Ticker'])
-            callData = callData.groupby(['Ticker','Position']).agg({'Position': 'count'})
-            putData.set_index(['Ticker'], inplace=True)
-            putData.sort_values(['Ticker'])
-            putData = putData.groupby(['Ticker','Position']).agg({'Position': 'count'})
+        if(data):   
+            print(data)
+            data = pd.DataFrame(data)
+            data.set_index(['Ticker'], inplace=True)
+            data = data.groupby(['Ticker']).agg('count')
+            print(data)
 
             # make pandas dataframe for call position comment volume data   
             callPositionData = pd.DataFrame(positionData)
@@ -172,28 +169,27 @@ for folder in list_subfolders_with_paths:
             if(os.path.isdir(r'F:\\Visual Studio Code Workspace\\WSB Scraper\\excel_data\\%s'%folder_name) == False):
                 os.makedirs(r'F:\\Visual Studio Code Workspace\\WSB Scraper\\excel_data\\%s'%folder_name)
             writer = pd.ExcelWriter(r'F:\\Visual Studio Code Workspace\\WSB Scraper\\excel_data\\%s\\%s.xlsx' %(folder_name, file_name), engine='xlsxwriter')
-            callData.to_excel(writer, sheet_name='Sheet1')
-            putData.to_excel(writer, sheet_name='Sheet1', startcol=3)
+            data.to_excel(writer, sheet_name='Sheet1')
             callPositionData.to_excel(writer, sheet_name='Sheet2')
-            numCallRows = len(callData.index)
-            numPutRows = len(putData.index) 
+            numRows = len(data.index)
             numPositionRows = len(callPositionData.index)
             workbook = writer.book
             tickerSheet = writer.sheets['Sheet1']
             positionSheet = writer.sheets['Sheet2']
             tickerChart = workbook.add_chart({'type': 'column', 'subtype': 'stacked'})
             tickerChart.add_series({
-                'name': ['Sheet1', 0, 1],
-                'categories': ['Sheet1', 1, 1, numCallRows, 0],
-                'values':     ['Sheet1', 1, 2, numCallRows, 2],
+                'name': ['Sheet1', 0, 2],
+                'categories': ['Sheet1', 1, 0, numRows, 0],
+                'values':     ['Sheet1', 1, 2, numRows, 2],
                 'gap':        2,
             })
             tickerChart.add_series({
-                'name': ['Sheet1', 0, 1],
-                'categories': ['Sheet1', 4, 4, numPutRows, 3],
-                'values':     ['Sheet1', 4, 5, numPutRows, 5],
+                'name': 'Bear Position',
+                'categories': ['Sheet1', 1, 0, numRows, 0],
+                'values':     ['Sheet1', 1, 1, numRows, 1],
                 'gap':        2,
             })
+            tickerChart.set_title({'name': 'Ticker Sentiment'})
             tickerSheet.insert_chart('O2', tickerChart)
 
             positionChart = workbook.add_chart({'type': 'column'})
