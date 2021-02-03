@@ -50,13 +50,15 @@ reddit = praw.Reddit(
 
 
 # get all comments from designated subreddit within a date range and save to disk.
-'''startDate = date(2020, 12, 7)
-endDate = date(2020, 12, 8)
+'''startDate = date(2021, 1, 20)
+endDate = date(2021, 1, 31)
 date_range = daterange(startDate, endDate)
 api = PushshiftAPI(reddit)
 
 start = dt.datetime
 for date in date_range:
+    year = date.year
+    month = date.month
     print(date)
     endTemp = date + timedelta(days=1)
     start_stamp = int(time.mktime(date.timetuple()))
@@ -64,7 +66,9 @@ for date in date_range:
     end_stamp = int(time.mktime(endTemp.timetuple()))
     print(start_stamp, end_stamp)
     wsbData = api.search_comments(after=start_stamp, before=end_stamp, subreddit='wallstreetbets')
-    comment_data = open(r"F:\\Visual Studio Code Workspace\\WSB Scraper\\reddit_data\\12 - December\\%s.txt" %date , "w+", encoding="utf-8")
+    if(os.path.isdir(r'F:\\Visual Studio Code Workspace\\WSB Scraper\\reddit_data\\{}\\{}'.format(year, month)) == False):
+                os.makedirs(r'F:\\Visual Studio Code Workspace\\WSB Scraper\\reddit_data\\{}\\{}'.format(year, month))
+    comment_data = open(r'F:\\Visual Studio Code Workspace\\WSB Scraper\\reddit_data\\{}\\{}\\{}.txt'.format(year, month, date) , "w+", encoding="utf-8")
     with comment_data as file_object:
         for c in wsbData:
             comment_data.write(c.body + "\n")'''
@@ -87,119 +91,118 @@ for comment in submission.comments.list():
 
 list_subfolders_with_paths = [f.path for f in os.scandir(r'F:\Visual Studio Code Workspace\WSB Scraper\reddit_data') if f.is_dir()]
 for folder in list_subfolders_with_paths:
-    for comment_file in os.listdir(folder):
-        print(comment_file)
-        textData = open(folder + "\\" + comment_file, encoding="utf-8")
-
-
-
-        # parse lines with regex patterns. There are currently a lot of unnecessary arrays being used
-        # while I figure out the best way to handle mapping puts/calls to excel charts. 
-        with textData as file_object:
-            line  = file_object.readline()
-            numCalls = 0
-            numPuts = 0
-            numTickerCalls = 0
-            numTickerPuts = 0
-            callData = []
-            putData = []
-            data = []
-            positionData = []
-            numPositions = 0
-            while line:
-                key, match = parseLine(line)
-
-                # group data by key type
-                if key == 'calls':
-                    numCalls += 1
-                elif key == 'puts':
-                    numPuts += 1
-                elif key == 'ticker_calls':
-                    call_ticker = match.group('ticker_calls', 0)
-                    numTickerCalls += 1
-                    row = {
-                        'Ticker': call_ticker[0],
-                        'Bull Position': "calls"
-                    }
-                    data.append(row)
-                elif key == 'ticker_puts':
-                    numTickerPuts += 1
-                    put_ticker = match.group('ticker_puts', 0)
-                    row = {
-                        'Ticker': put_ticker[0],
-                        'Bear Position': "puts"
-                    }
-                    data.append(row)
-                elif key == 'callPosition':
-                    numPositions += 1
-                    position = match.group('callPosition', 0)
-                    row = {
-                        'Ticker': position[0],
-                        'Position': re.search(r'\d+/\d+ \d+[c-cC-C]', position[1]).group()
-                    }
-                    positionData.append(row)
-                elif key == 'putPosition':
-                    numPositions += 1
-                    position = match.group('putPosition', 0)
-                    row = {
-                        'Ticker': position[0],
-                        'Position': re.search(r'\d+/\d+ \d+[p-pP-P]', position[1]).group()
-                    }
-                    positionData.append(row)           
-
-
-                line = file_object.readline()
+    month_folders = [f.path for f in os.scandir(folder) if f.is_dir()]
+    for month_folder in month_folders:
+        for comment_file in os.listdir(month_folder):
+            textData = open(month_folder + "\\" + comment_file, encoding="utf-8")
             
-        # make pandas dataframe for ticker comment volume data
-        if(data):   
-            print(data)
-            data = pd.DataFrame(data)
-            data.set_index(['Ticker'], inplace=True)
-            data = data.groupby(['Ticker']).agg('count')
-            print(data)
+            
+            # parse lines with regex patterns. There are currently a lot of unnecessary arrays being used
+            # while I figure out the best way to handle mapping puts/calls to excel charts. 
+            with textData as file_object:
+                line  = file_object.readline()
+                numCalls = 0
+                numPuts = 0
+                numTickerCalls = 0
+                numTickerPuts = 0
+                callData = []
+                putData = []
+                data = []
+                positionData = []
+                numPositions = 0
+                while line:
+                    key, match = parseLine(line)
 
-            # make pandas dataframe for call position comment volume data   
-            callPositionData = pd.DataFrame(positionData)
-            callPositionData.set_index(['Ticker'], inplace=True)
-            callPositionData = callPositionData.groupby(['Ticker']).agg({'Position': 'count'})
+                    # group data by key type
+                    if key == 'calls':
+                        numCalls += 1
+                    elif key == 'puts':
+                        numPuts += 1
+                    elif key == 'ticker_calls':
+                        call_ticker = match.group('ticker_calls', 0)
+                        numTickerCalls += 1
+                        row = {
+                            'Ticker': call_ticker[0],
+                            'Bull Position': "calls"
+                        }
+                        data.append(row)
+                    elif key == 'ticker_puts':
+                        numTickerPuts += 1
+                        put_ticker = match.group('ticker_puts', 0)
+                        row = {
+                            'Ticker': put_ticker[0],
+                            'Bear Position': "puts"
+                        }
+                        data.append(row)
+                    elif key == 'callPosition':
+                        numPositions += 1
+                        position = match.group('callPosition', 0)
+                        row = {
+                            'Ticker': position[0],
+                            'Position': re.search(r'\d+/\d+ \d+[c-cC-C]', position[1]).group()
+                        }
+                        positionData.append(row)
+                    elif key == 'putPosition':
+                        numPositions += 1
+                        position = match.group('putPosition', 0)
+                        row = {
+                            'Ticker': position[0],
+                            'Position': re.search(r'\d+/\d+ \d+[p-pP-P]', position[1]).group()
+                        }
+                        positionData.append(row)           
 
-            # make excel bar chart with pandas dataframe 
-            folder_name = os.path.split(folder)[1]
-            file_name = os.path.splitext(comment_file)[0]
-            if(os.path.isdir(r'F:\\Visual Studio Code Workspace\\WSB Scraper\\excel_data\\%s'%folder_name) == False):
-                os.makedirs(r'F:\\Visual Studio Code Workspace\\WSB Scraper\\excel_data\\%s'%folder_name)
-            writer = pd.ExcelWriter(r'F:\\Visual Studio Code Workspace\\WSB Scraper\\excel_data\\%s\\%s.xlsx' %(folder_name, file_name), engine='xlsxwriter')
-            data.to_excel(writer, sheet_name='Sheet1')
-            callPositionData.to_excel(writer, sheet_name='Sheet2')
-            numRows = len(data.index)
-            numPositionRows = len(callPositionData.index)
-            workbook = writer.book
-            tickerSheet = writer.sheets['Sheet1']
-            positionSheet = writer.sheets['Sheet2']
-            tickerChart = workbook.add_chart({'type': 'column', 'subtype': 'stacked'})
-            tickerChart.add_series({
-                'name': ['Sheet1', 0, 2],
-                'categories': ['Sheet1', 1, 0, numRows, 0],
-                'values':     ['Sheet1', 1, 2, numRows, 2],
-                'gap':        2,
-            })
-            tickerChart.add_series({
-                'name': 'Bear Position',
-                'categories': ['Sheet1', 1, 0, numRows, 0],
-                'values':     ['Sheet1', 1, 1, numRows, 1],
-                'gap':        2,
-            })
-            tickerChart.set_title({'name': 'Ticker Sentiment'})
-            tickerSheet.insert_chart('O2', tickerChart)
 
-            positionChart = workbook.add_chart({'type': 'column'})
-            positionChart.add_series({
-                'categories': ['Sheet2', 1, 1, numPositionRows, 0],
-                'values':     ['Sheet2', 2, 2, numPositionRows, 2],
-                'gap':        2,
-            })
-            positionSheet.insert_chart('D2', positionChart)
-            writer.save()
+                    line = file_object.readline()
+                
+            # make pandas dataframe for ticker comment volume data
+            if(data):
+                data = pd.DataFrame(data, columns=["Ticker","Bear Position","Bull Position"])
+                data = data.groupby(['Ticker']).agg('count')
+                print(data)
+
+                # make pandas dataframe for call position comment volume data   
+                callPositionData = pd.DataFrame(positionData)
+                callPositionData.set_index(['Ticker'], inplace=True)
+                callPositionData = callPositionData.groupby(['Ticker']).agg({'Position': 'count'})
+
+                # make excel bar chart with pandas dataframe 
+                folder_name = os.path.split(folder)[1]
+                month_name = os.path.split(month_folder)[1]
+                file_name = os.path.splitext(comment_file)[0]
+                if(os.path.isdir(r'F:\\Visual Studio Code Workspace\\WSB Scraper\\excel_data\\{}\\{}'.format(folder_name, month_name)) == False):
+                    os.makedirs(r'F:\\Visual Studio Code Workspace\\WSB Scraper\\excel_data\\{}\\{}'.format(folder_name, month_name))
+                writer = pd.ExcelWriter(r'F:\\Visual Studio Code Workspace\\WSB Scraper\\excel_data\\{}\\{}\\{}.xlsx'.format(folder_name, month_name, file_name), engine='xlsxwriter')
+                data.to_excel(writer, sheet_name='Sheet1')
+                callPositionData.to_excel(writer, sheet_name='Sheet2')
+                numRows = len(data.index)
+                numPositionRows = len(callPositionData.index)
+                workbook = writer.book
+                tickerSheet = writer.sheets['Sheet1']
+                positionSheet = writer.sheets['Sheet2']
+                tickerChart = workbook.add_chart({'type': 'column', 'subtype': 'stacked'})
+                tickerChart.add_series({
+                    'name': ['Sheet1', 0, 2],
+                    'categories': ['Sheet1', 1, 0, numRows, 0],
+                    'values':     ['Sheet1', 1, 2, numRows, 2],
+                    'gap':        2,
+                })
+                tickerChart.add_series({
+                    'name': 'Bear Position',
+                    'categories': ['Sheet1', 1, 0, numRows, 0],
+                    'values':     ['Sheet1', 1, 1, numRows, 1],
+                    'gap':        2,
+                })
+                tickerChart.set_title({'name': 'Ticker Sentiment'})
+                tickerSheet.insert_chart('O2', tickerChart)
+
+                positionChart = workbook.add_chart({'type': 'column'})
+                positionChart.add_series({
+                    'categories': ['Sheet2', 1, 1, numPositionRows, 0],
+                    'values':     ['Sheet2', 2, 2, numPositionRows, 2],
+                    'gap':        2,
+                })
+                positionSheet.insert_chart('D2', positionChart)
+                writer.save()
 
 
 
